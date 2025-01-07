@@ -9,12 +9,12 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": ["*"],
   "main": "./extension.js",
   "contributes": {
     "commands": [{
-      "command": "productivitytrackerplugin.helloWorld",
-      "title": "Hello World"
+      "command": "productivityTracker.showLog",
+      "title": "Show Productivity Log"
     }]
   },
   "scripts": {
