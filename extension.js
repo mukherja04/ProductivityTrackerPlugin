@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 let logFilePath;
+let modelFilePath;
 const fileContentCache = {}; // Cache for file content
 const unsavedChanges = {}; // To store charsAdded by file since the last save or log
 let logInterval; // Timer for periodic logging
@@ -15,8 +16,10 @@ function activate(context) {
     vscode.window.showInformationMessage('Productivity Tracker extension is now active!');
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (workspaceFolders) {
-        logFilePath = path.join(workspaceFolders[0].uri.fsPath, 'productivity_log.json');
-        console.log(`Log file path set to: ${logFilePath}`);
+        // Log and model paths for the current project
+        const workspaceDir = workspaceFolders[0].uri.fsPath;
+        logFilePath = path.join(workspaceDir, 'productivity_log.json');
+        modelFilePath = path.join(workspaceDir, 'productivity_model.pkl');
     } else {
         vscode.window.showErrorMessage("Please open a folder in VSCode to enable logging.");
         return;
@@ -73,6 +76,15 @@ function activate(context) {
         showLogSummary();
     });
     context.subscriptions.push(showLogCommand);
+
+    const generateInsightsCommand = vscode.commands.registerCommand(
+        'productivityTracker.generateInsights',
+        () => {
+            generateInsights();
+        }
+    );
+
+    context.subscriptions.push(generateInsightsCommand);
 }
 
 /**
@@ -110,11 +122,8 @@ function logUnsavedChanges() {
             }
 
             // Append the new log data and write back to the file
-            fs.writeFileSync(
-                logFilePath,
-                JSON.stringify([...existingLog, ...logData], null, 2),
-                'utf-8'
-            );
+            const combinedLog = [...existingLog, ...logData];
+            fs.writeFileSync(logFilePath, JSON.stringify(combinedLog, null, 2), 'utf-8');
 
             console.log(`[logUnsavedChanges] Logged changes: ${JSON.stringify(logData)}`);
         }
@@ -125,6 +134,111 @@ function logUnsavedChanges() {
         console.error('[logUnsavedChanges] Error logging changes:', error);
     }
 }
+
+function generateInsights() {
+
+    vscode.window.showInformationMessage('Starting generateInsights() function');
+
+    const { spawnSync } = require('child_process');
+
+    try {
+        // Check if the log file exists
+        if (!fs.existsSync(logFilePath)) {
+            vscode.window.showErrorMessage('Productivity log file not found! Please start coding to generate logs.');
+            return;
+        }
+
+        // Check if the log file is empty
+        const rawData = fs.readFileSync(logFilePath, 'utf-8');
+        if (!rawData.trim()) {
+            vscode.window.showErrorMessage('Productivity log file is empty! Please continue coding to populate the log.');
+            return;
+        }
+
+        // Parse the log data
+        const logData = JSON.parse(rawData);
+        if (logData.length === 0) {
+            vscode.window.showErrorMessage('No data in productivity log. Start coding to generate meaningful logs.');
+            return;
+        }
+
+        // Path to the training script
+        const trainingScriptPath = path.join(__dirname, 'train_model.py');
+
+        if (!fs.existsSync(trainingScriptPath)) {
+            vscode.window.showErrorMessage('Training script not found!');
+            return;
+        }
+
+        // Run the training script
+        const result = spawnSync('python', [
+            trainingScriptPath,
+            '--log', logFilePath,
+            '--model', modelFilePath
+        ]);
+
+        if (result.error) {
+            console.error('Error running training script:', result.error);
+            vscode.window.showErrorMessage('Error training the model. Check console for details.');
+            return;
+        }
+
+        vscode.window.showInformationMessage('Model trained successfully.');
+
+        // Generate insights using the trained model
+        generateModelInsights(modelFilePath);
+
+    } catch (error) {
+        console.error('Error generating insights:', error);
+        vscode.window.showErrorMessage('Failed to generate insights. Check console for details.');
+    }
+}
+
+
+function generateModelInsights(modelPath) {
+    vscode.window.showInformationMessage('Starting generateModelInsights() function');
+
+    const { spawnSync } = require('child_process');
+
+    // Path to the insights script
+    const insightsScriptPath = path.join(__dirname, 'generate_insights.py');
+    const plotFilePath = path.join(path.dirname(logFilePath), 'productivity_plot.png');
+
+    if (!fs.existsSync(insightsScriptPath)) {
+        vscode.window.showErrorMessage('Insights script not found!');
+        return;
+    }
+
+    // Run the insights script to generate the plot
+    const result = spawnSync('python', [
+        insightsScriptPath,
+        '--model', modelFilePath,
+        '--log', logFilePath,
+        '--output', plotFilePath
+    ]);
+
+    // Capture and log stdout (print statements)
+    const stdout = result.stdout.toString();
+    const stderr = result.stderr.toString();
+
+    vscode.window.showInformationMessage(`Python script stdout: ${stdout}`);
+    vscode.window.showInformationMessage(`Python script stderr: ${stderr}`);
+
+    if (result.error) {
+        console.error('Error running insights script:', result.error);
+        vscode.window.showErrorMessage('Failed to generate insights. Check console for details.');
+        return;
+    }
+
+    vscode.window.showInformationMessage(plotFilePath);
+    vscode.window.showInformationMessage('Insights generated successfully.');
+
+    // Open the plot in VSCode
+    vscode.workspace.openTextDocument(plotFilePath).then(doc => {
+        vscode.window.showTextDocument(doc);
+    });
+}
+
 
 /**
  * Reads the log file and displays a summary in VSCode
@@ -159,4 +273,3 @@ module.exports = {
     activate,
     deactivate
 };
-

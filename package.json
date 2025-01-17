@@ -14,7 +14,11 @@
   "contributes": {
     "commands": [{
       "command": "productivityTracker.showLog",
-      "title": "Show Productivity Log"
+      "title": "ProductivityTracker: Show Productivity Log"
+    },
+    {
+      "command": "productivityTracker.generateInsights",
+      "title": "ProductivityTracker: Generate Insights"
     }]
   },
   "scripts": {
