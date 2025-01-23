@@ -136,9 +136,6 @@ function logUnsavedChanges() {
 }
 
 function generateInsights() {
-
-    vscode.window.showInformationMessage('Starting generateInsights() function');
-
     const { spawnSync } = require('child_process');
 
     try {
@@ -196,8 +193,6 @@ function generateInsights() {
 
 
 function generateModelInsights(modelPath) {
-    vscode.window.showInformationMessage('Starting generateModelInsights() function');
-
     const { spawnSync } = require('child_process');
 
     // Path to the insights script
@@ -216,13 +211,6 @@ function generateModelInsights(modelPath) {
         '--log', logFilePath,
         '--output', plotFilePath
     ]);
-
-    // Capture and log stdout (print statements)
-    const stdout = result.stdout.toString();
-    const stderr = result.stderr.toString();
-
-    vscode.window.showInformationMessage(`Python script stdout: ${stdout}`);
-    vscode.window.showInformationMessage(`Python script stderr: ${stderr}`);
 
     if (result.error) {
         console.error('Error running insights script:', result.error);
