@@ -103,10 +103,3 @@ pip install -r requirements.txt
 ### Debugging
 - Use the VSCode Output tab to check for logs.
 - Check the console logs in the Extension Development Host window.
-
----
-
-## Future Improvements
-- Add support for additional ML models.
-- Provide interactive visualization options in VSCode.
-- Improve accuracy by incorporating more features (e.g., file types, coding duration).
